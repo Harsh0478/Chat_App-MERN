@@ -1,0 +1,111 @@
+import { useEffect, useState } from "react";
+import { useChatStore } from "../store/useChatStore";
+import { useAuthStore } from "../store/useAuthStore";
+import { Users } from "lucide-react";
+import Avatar from "../assets/avatar.png";
+import SidebarSkeleton from "./skeletons/SidebarSkeleton";
+
+const Sidebar = () => {
+  const { getUsers, users, selectedUser, setSelectedUser, isUsersLoading } =
+    useChatStore();
+  const { onlineUsers, authUser } = useAuthStore();
+  const [showOnlineOnly, setShowOnlineOnly] = useState(false);
+
+  // Fetch users once on mount
+  useEffect(() => {
+    getUsers();
+  }, [getUsers]);
+
+  if (!authUser) return <div className="text-center mt-20">Loading...</div>;
+  if (isUsersLoading) return <SidebarSkeleton />;
+
+  // Merge online users into users array if they don't exist yet
+  const mergedUsers = [
+    ...users,
+    ...onlineUsers
+      .filter((id) => !users.some((user) => user._id === id))
+      .map((id) => ({ _id: id, fullName: "Unknown User", profilePic: "" })),
+  ];
+
+  // Filter users based on online toggle and exclude current user
+  const filteredUsers = showOnlineOnly
+    ? mergedUsers.filter(
+        (user) => onlineUsers.includes(user._id) && user._id !== authUser._id
+      )
+    : mergedUsers.filter((user) => user._id !== authUser._id);
+
+  const onlineCount = onlineUsers.filter((id) => id !== authUser._id).length;
+
+  return (
+    <aside className="h-full w-20 lg:w-72 border-r border-base-300 flex flex-col transition-all duration-200">
+      <div className="border-b border-base-300 w-full p-5">
+        <div className="flex items-center gap-2">
+          <Users className="size-6" />
+          <span className="font-medium hidden lg:block">Contacts</span>
+        </div>
+
+        {/* Online filter toggle */}
+        <div className="mt-3 hidden lg:flex items-center gap-2">
+          <label className="cursor-pointer flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={showOnlineOnly}
+              onChange={(e) => setShowOnlineOnly(e.target.checked)}
+              className="checkbox checkbox-sm"
+            />
+            <span className="text-sm">Show online only</span>
+          </label>
+          <span className="text-xs text-zinc-500">({onlineCount} online)</span>
+        </div>
+      </div>
+
+      {/* Users list */}
+      <div className="overflow-y-auto w-full py-3">
+        {filteredUsers.length > 0 ? (
+          filteredUsers.map((user) => (
+            <button
+              key={user._id}
+              onClick={() => setSelectedUser(user)}
+              className={`
+                w-full p-3 flex items-center gap-3
+                hover:bg-base-300 transition-colors
+                ${
+                  selectedUser?._id === user._id
+                    ? "bg-base-300 ring-1 ring-base-300"
+                    : ""
+                }
+              `}
+            >
+              <div className="relative mx-auto lg:mx-0">
+                <img
+                  src={user.profilePic || Avatar}
+                  alt={user.fullName || "User"}
+                  className="size-12 object-cover rounded-full"
+                />
+
+                {onlineUsers.includes(user._id) && (
+                  <span
+                    className="absolute bottom-0 right-0 size-3 bg-green-500 
+                      rounded-full ring-2 ring-zinc-900"
+                  />
+                )}
+              </div>
+
+              {/* User info - only on large screens */}
+              <div className="hidden lg:block text-left min-w-0">
+                <div className="font-medium truncate">{user.fullName}</div>
+                <div className="text-sm text-zinc-400">
+                  {onlineUsers.includes(user._id) ? "Online" : "Offline"}
+                </div>
+              </div>
+            </button>
+          ))
+        ) : (
+          <div className="text-center text-zinc-500 py-4">No users to show</div>
+        )}
+      </div>
+    </aside>
+  );
+};
+
+export default Sidebar;
