@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "build": "npm install --prefix mobile && npm run build --prefix mobile",
-    "start": "node index.js --prefix backend",
+    "start": "node backend/index.js",
     "deploy": "npm run build && npm run start"
   },
   "keywords": [],
